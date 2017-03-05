@@ -9,5 +9,6 @@ lazy val root = (project in file(".")).
     )),
     name := "Stocking",
     libraryDependencies += scalaTest % Test,
-    libraryDependencies += "net.ruippeixotog" %% "scala-scraper" % "1.2.0"
+    libraryDependencies += "net.ruippeixotog" %% "scala-scraper" % "1.2.0",
+    libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.16.0"
   )

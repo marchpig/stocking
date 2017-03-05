@@ -5,8 +5,11 @@ import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model.Element
+import com.github.nscala_time.time.Imports._
 
 object Scraper extends App {
+  val DateTimeLimit = new DateTime() - 1.days
+
   val company = Company("CJ CGV", "079160")
   println(company.name)
   println(company.itemList.mkString("\n"))
@@ -20,20 +23,20 @@ case class Company(name: String, code: String) {
 
   def getItemList(boardUrl: String, pageNumber: Int): List[Item] = {
     val doc = browser.get(boardUrl + pageNumber)
-    val companyName = (doc >> text("title")).split(":")(0)
     val itemElementList: List[Element] = (doc >> elementList("tr")).filter(_.hasAttr("align"))
     val itemList = itemElementList.foldRight(List[Item]())((elem: Element, itemList: List[Item]) => {
-      val date = elem >> text(".gray03")
+      val dateTime = (elem >> text(".gray03")).toDateTime("yy.MM.dd HH:mm")
       val title = elem >> attr("title")("a")
       val userId = elem >> text("td.p11")
       val url = "http://finance.naver.com" + (elem >> attr("href")("a"))
-      new Item(date, title, userId, url) :: itemList
+      new Item(dateTime, title, userId, url) :: itemList
     })
-    if (itemList.last.date.startsWith("2017.03"))
-      itemList ::: getItemList(boardUrl, pageNumber + 1)
-    else
+
+    if (itemList.last.dateTime < Scraper.DateTimeLimit)
       itemList
+    else
+      itemList ::: getItemList(boardUrl, pageNumber + 1)
   }
 }
 
-case class Item(date: String, title: String, userId: String, url: String)
+case class Item(dateTime: DateTime, title: String, userId: String, url: String)
