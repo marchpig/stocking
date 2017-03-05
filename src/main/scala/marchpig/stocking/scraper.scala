@@ -10,16 +10,19 @@ import com.github.nscala_time.time.Imports._
 object Scraper extends App {
   val DateTimeLimit = new DateTime() - 1.days
 
-  val company = Company("CJ CGV", "079160")
-  println(company.name)
-  println(company.itemList.mkString("\n"))
-  println(company.itemList.length)
+  val companyList = List(Company("CJ CGV", "079160"), Company("이-글 벳", "044960"));
+
+  val mergedItemList = companyList.foldLeft(List[Item]())((mergedItemList: List[Item], company: Company) => {
+    mergedItemList ::: company.itemList
+  }).sortBy(_.dateTime).reverse
+
+  println(mergedItemList.mkString("\n"))
 }
 
 case class Company(name: String, code: String) {
   val browser = JsoupBrowser()
   val url = s"http://finance.naver.com/item/board.nhn?code=$code&page="
-  lazy val itemList = getItemList(url, 1)
+  lazy val itemList = getItemList(url, 1).filter(_.dateTime > Scraper.DateTimeLimit)
 
   def getItemList(boardUrl: String, pageNumber: Int): List[Item] = {
     val doc = browser.get(boardUrl + pageNumber)
@@ -29,7 +32,7 @@ case class Company(name: String, code: String) {
       val title = elem >> attr("title")("a")
       val userId = elem >> text("td.p11")
       val url = "http://finance.naver.com" + (elem >> attr("href")("a"))
-      new Item(dateTime, title, userId, url) :: itemList
+      new Item(name, dateTime, title, userId, url) :: itemList
     })
 
     if (itemList.last.dateTime < Scraper.DateTimeLimit)
@@ -39,4 +42,4 @@ case class Company(name: String, code: String) {
   }
 }
 
-case class Item(dateTime: DateTime, title: String, userId: String, url: String)
+case class Item(companyName: String, dateTime: DateTime, title: String, userId: String, url: String)
