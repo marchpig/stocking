@@ -33,7 +33,7 @@ case class Company(name: String, code: String) {
       val title = elem >> attr("title")("a")
       val userId = elem >> text("td.p11")
       val url = "http://finance.naver.com" + (elem >> attr("href")("a"))
-      new Item(name, dateTime, title, userId, url) :: itemList
+      Item(name, dateTime, title, userId, url) :: itemList
     })
 
     if (itemListInOnePage.last.dateTime < Scraper.DateTimeLimit)
