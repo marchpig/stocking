@@ -22,12 +22,13 @@ object Scraper extends App {
 case class Company(name: String, code: String) {
   val browser = JsoupBrowser()
   val url = s"http://finance.naver.com/item/board.nhn?code=$code&page="
-  lazy val itemList = getItemList(url, 1).filter(_.dateTime > Scraper.DateTimeLimit)
+  lazy val itemList = getItemList(url, 1, List[Item]()).filter(_.dateTime > Scraper.DateTimeLimit)
 
-  def getItemList(boardUrl: String, pageNumber: Int): List[Item] = {
+  @annotation.tailrec
+  private def getItemList(boardUrl: String, pageNumber: Int, itemList: List[Item]): List[Item] = {
     val doc = browser.get(boardUrl + pageNumber)
     val itemElementList: List[Element] = (doc >> elementList("tr")).filter(_.hasAttr("align"))
-    val itemList = itemElementList.foldRight(List[Item]())((elem: Element, itemList: List[Item]) => {
+    val itemListInOnePage = itemElementList.foldRight(List[Item]())((elem: Element, itemList: List[Item]) => {
       val dateTime = (elem >> text(".gray03")).toDateTime("yy.MM.dd HH:mm")
       val title = elem >> attr("title")("a")
       val userId = elem >> text("td.p11")
@@ -35,10 +36,10 @@ case class Company(name: String, code: String) {
       new Item(name, dateTime, title, userId, url) :: itemList
     })
 
-    if (itemList.last.dateTime < Scraper.DateTimeLimit)
-      itemList
+    if (itemListInOnePage.last.dateTime < Scraper.DateTimeLimit)
+      itemList ::: itemListInOnePage
     else
-      itemList ::: getItemList(boardUrl, pageNumber + 1)
+      getItemList(boardUrl, pageNumber + 1, itemList ::: itemListInOnePage)
   }
 }
 
